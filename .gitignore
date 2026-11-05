@@ -1,0 +1,4 @@
+# Ignore live MDM configuration containing real API keys and generated zip archive
+admin_settings.json
+apiproxy.zip
+.DS_Store

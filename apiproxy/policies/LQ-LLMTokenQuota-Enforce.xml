@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<LLMTokenQuota continueOnError="false" enabled="true" name="LQ-LLMTokenQuota-Enforce">
+    <DisplayName>LQ-LLMTokenQuota-Enforce</DisplayName>
+    <EnforceOnly>true</EnforceOnly>
+    <Identifier ref="cost_center"/>
+    <LLMModelSource>{model_name}</LLMModelSource>
+    <SharedName>AGY-Gateway-LLMTokenQuota</SharedName>
+    <UseQuotaConfigInAPIProduct stepName="VA-VerifyAPIKey">
+        <DefaultConfig>
+            <Allow>1000000</Allow>
+            <Interval>1</Interval>
+            <TimeUnit>day</TimeUnit>
+        </DefaultConfig>
+    </UseQuotaConfigInAPIProduct>
+</LLMTokenQuota>

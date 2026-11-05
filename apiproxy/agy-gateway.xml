@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<APIProxy name="agy-gateway">
+    <DisplayName>Antigravity Enterprise Gateway</DisplayName>
+    <Description>Apigee Enterprise Gateway Proxy for Google Antigravity (agy) with VerifyAPIKey, ExtractVariables, LLMTokenQuota, and DataCapture</Description>
+    <BasePaths>/agy-gateway</BasePaths>
+    <Policies>
+        <Policy>EV-ExtractRequestMetadata</Policy>
+        <Policy>VA-VerifyAPIKey</Policy>
+        <Policy>LQ-LLMTokenQuota-Enforce</Policy>
+        <Policy>AM-PrepareTargetRequest</Policy>
+        <Policy>EV-ExtractTokenUsage</Policy>
+        <Policy>LQ-LLMTokenQuota-Count</Policy>
+        <Policy>DC-CaptureGatewayAnalytics</Policy>
+        <Policy>AM-TelemetryResponse</Policy>
+    </Policies>
+    <ProxyEndpoints>
+        <ProxyEndpoint>default</ProxyEndpoint>
+    </ProxyEndpoints>
+    <TargetEndpoints>
+        <TargetEndpoint>default</TargetEndpoint>
+    </TargetEndpoints>
+</APIProxy>

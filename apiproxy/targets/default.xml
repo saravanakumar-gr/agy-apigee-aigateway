@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<TargetEndpoint name="default">
+    <Description>Vertex AI Gemini TargetEndpoint using declarative AssignMessage target.url and GoogleAccessToken Auth</Description>
+    <FaultRules/>
+    <PreFlow name="PreFlow">
+        <Request>
+            <Step>
+                <Name>AM-PrepareTargetRequest</Name>
+            </Step>
+        </Request>
+        <Response/>
+    </PreFlow>
+    <Flows/>
+    <PostFlow name="PostFlow">
+        <Request/>
+        <Response/>
+    </PostFlow>
+    <HTTPTargetConnection>
+        <Properties>
+            <Property name="connect.timeout.millis">10000</Property>
+            <Property name="io.timeout.millis">300000</Property>
+            <Property name="keepalive.timeout.millis">60000</Property>
+        </Properties>
+        <URL>https://aiplatform.googleapis.com</URL>
+        <Authentication>
+            <GoogleAccessToken>
+                <Scopes>
+                    <Scope>https://www.googleapis.com/auth/cloud-platform</Scope>
+                </Scopes>
+            </GoogleAccessToken>
+        </Authentication>
+    </HTTPTargetConnection>
+</TargetEndpoint>

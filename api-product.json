@@ -1,0 +1,121 @@
+{
+  "name": "agy-gateway-product",
+  "displayName": "Antigravity Enterprise Gateway Product",
+  "approvalType": "auto",
+  "description": "API Product authorizing Antigravity (agy) model requests via Apigee (/agy-gateway) with per-model and per-department LLMTokenQuota",
+  "environments": [
+    "<YOUR_APIGEE_ENV>"
+  ],
+  "attributes": [
+    {
+      "name": "access",
+      "value": "public"
+    }
+  ],
+  "operationGroup": {
+    "operationConfigType": "proxy",
+    "operationConfigs": [
+      {
+        "apiSource": "agy-gateway",
+        "operations": [
+          {
+            "resource": "/**",
+            "methods": [
+              "GET",
+              "POST"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "llmOperationGroup": {
+    "operationConfigs": [
+      {
+        "apiSource": "agy-gateway",
+        "llmOperations": [
+          {
+            "resource": "/**",
+            "methods": [
+              "POST"
+            ],
+            "model": "gemini-2.5-flash"
+          }
+        ],
+        "llmTokenQuota": {
+          "limit": "1000000",
+          "interval": "1",
+          "timeUnit": "day"
+        }
+      },
+      {
+        "apiSource": "agy-gateway",
+        "llmOperations": [
+          {
+            "resource": "/**",
+            "methods": [
+              "POST"
+            ],
+            "model": "gemini-2.5-pro"
+          }
+        ],
+        "llmTokenQuota": {
+          "limit": "1000000",
+          "interval": "1",
+          "timeUnit": "day"
+        }
+      },
+      {
+        "apiSource": "agy-gateway",
+        "llmOperations": [
+          {
+            "resource": "/**",
+            "methods": [
+              "POST"
+            ],
+            "model": "gemini-3-flash-preview"
+          }
+        ],
+        "llmTokenQuota": {
+          "limit": "1000000",
+          "interval": "1",
+          "timeUnit": "day"
+        }
+      },
+      {
+        "apiSource": "agy-gateway",
+        "llmOperations": [
+          {
+            "resource": "/**",
+            "methods": [
+              "POST"
+            ],
+            "model": "gemini-3.1-pro-preview"
+          }
+        ],
+        "llmTokenQuota": {
+          "limit": "1000000",
+          "interval": "1",
+          "timeUnit": "day"
+        }
+      },
+      {
+        "apiSource": "agy-gateway",
+        "llmOperations": [
+          {
+            "resource": "/**",
+            "methods": [
+              "POST"
+            ],
+            "model": "gemini-3.1-flash-lite"
+          }
+        ],
+        "llmTokenQuota": {
+          "limit": "1000000",
+          "interval": "1",
+          "timeUnit": "day"
+        }
+      }
+    ]
+  }
+}

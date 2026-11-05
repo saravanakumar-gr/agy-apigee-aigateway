@@ -1,0 +1,28 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ExtractVariables async="false" continueOnError="true" enabled="true" name="EV-ExtractRequestMetadata">
+    <DisplayName>EV-ExtractRequestMetadata</DisplayName>
+    <Properties/>
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+    <Source clearPayload="false">request</Source>
+    <Header name="Authorization">
+        <Pattern ignoreCase="true">Bearer {client_apikey}</Pattern>
+    </Header>
+    <Header name="x-goog-api-key">
+        <Pattern ignoreCase="true">{client_apikey}</Pattern>
+    </Header>
+    <Header name="x-api-key">
+        <Pattern ignoreCase="true">{client_apikey}</Pattern>
+    </Header>
+    <QueryParam name="key">
+        <Pattern ignoreCase="true">{client_apikey}</Pattern>
+    </QueryParam>
+    <Header name="X-Cost-Center">
+        <Pattern ignoreCase="true">{cost_center}</Pattern>
+    </Header>
+    <URIPath>
+        <Pattern ignoreCase="true">/v1beta/models/{model_name}:{model_action}</Pattern>
+        <Pattern ignoreCase="true">/v1beta1/models/{model_name}:{model_action}</Pattern>
+        <Pattern ignoreCase="true">/v1/models/{model_name}:{model_action}</Pattern>
+        <Pattern ignoreCase="true">/v1beta1/projects/{proj}/locations/{loc}/publishers/google/models/{model_name}:{model_action}</Pattern>
+    </URIPath>
+</ExtractVariables>

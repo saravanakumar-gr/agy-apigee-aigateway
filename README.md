@@ -1,0 +1,144 @@
+# Apigee Enterprise AI Gateway for Antigravity
+
+This repository contains a sample template to serve as a reference implementation for deploying Apigee as a secure AI gateway for Google Antigravity.
+
+* Designed as a starting point to show how to govern, secure, and route Antigravity traffic.
+* Configured entirely using OOTB Apigee policies with zero custom scripting.
+* Demonstrates how to satisfy Google Enterprise Gateway guidelines by preserving mandatory client attribution headers and utilizing centralized service account authentication (https://docs.cloud.google.com/gemini/enterprise/docs/ai-developer-tools/deploy-enterprise-gateway)
+
+---
+
+## How This Satisfies All Enterprise Gateway Requirements
+
+| Enterprise Gateway Requirement | How Apigee X (`agy-gateway`) Implements It |
+| :--- | :--- |
+| **1. Preserve Client Attribution Headers**<br>(`User-Agent`, `X-Goog-Api-Client`, `X-Cost-Center`) | Apigee preserves client attribution headers verbatim by default, strips gateway credentials (`Authorization`, `x-api-key`, `x-goog-api-key`), and injects `X-Goog-User-Project`. |
+| **2. SSE Streaming & Payload Normalization**<br>(`:streamGenerateContent?alt=sse`) | Forwards SSE streams (`text/event-stream`) from Vertex AI and declaratively normalizes `thinkingConfig` (`includeThoughts: true, thinkingBudget: 0`) via Apigee Message Templates. |
+| **3. Acknowledge IDE Telemetry Endpoints**<br>(`POST /v1beta:*` $\rightarrow$ `HTTP 200 OK` `{}`) | Handled via a loopback `<RouteRule>` and `AssignMessage` policy so Antigravity IDE telemetry pings (`POST /v1beta:recordTelemetry`) return `200 OK` `{}` without hitting Vertex AI. |
+| **4. Multi-Header API Key Auth**<br>(`Authorization: Bearer <KEY>`, `x-goog-api-key`, `?key=`) | Extracts the API key from `Authorization: Bearer <KEY>` (or `x-goog-api-key` / `?key=`) and validates it via **VerifyAPIKey** against the Apigee API Product (`api-product.json`). |
+| **5. Model Allowlisting & Per-Department Token Quotas** | Enforces strict model allowlisting and daily token budgets per `(X-Cost-Center, model)` combination using Apigee's **LLM Token Quota** policy and [`api-product.json`](./api-product.json). |
+| **6. FinOps Chargeback Analytics** | Captures the requested model (`dc_ax_model_used`), consumed tokens (`dc_tokens`), and department (`dc_cost_center`) directly into **Apigee Analytics** via **DataCapture**. |
+
+---
+
+## Quickstart
+
+### 1. Deploy to Apigee X
+
+Set your GCP Project / Apigee Organization, Environment, and Environment Group Hostname, then run [`./deploy.sh`](./deploy.sh):
+
+```bash
+export PROJECT_ID="<YOUR_GCP_PROJECT_ID>"
+export APIGEE_ENV="<YOUR_APIGEE_ENV>"
+export APIGEE_HOST="<YOUR_APIGEE_HOSTNAME>"
+
+./deploy.sh
+```
+
+`./deploy.sh` automatically:
+1. Creates the `llm-proxy@${PROJECT_ID}.iam.gserviceaccount.com` Service Account and grants `roles/aiplatform.user` (if not already present).
+2. Creates the Apigee Analytics Data Collectors (`dc_ax_model_used`, `dc_tokens`, `dc_cost_center`).
+3. Packages, imports, and deploys the `agy-gateway` proxy bundle.
+4. Configures the API Product (`agy-gateway-product`) from [`api-product.json`](./api-product.json).
+5. Creates the Developer and Developer App (`agy-gateway-app`) and prints your **Consumer API Key**.
+
+---
+
+### 2. Verify the Gateway (`./test-gateway.sh`)
+
+Run the automated test suite to verify authentication, telemetry acknowledgment, model allowlisting, and SSE streaming:
+
+```bash
+export AGY_LLM_GATEWAY_URL="https://${APIGEE_HOST}/agy-gateway"
+export AGY_LLM_GATEWAY_API_KEY="<YOUR_APIGEE_CONSUMER_KEY>"
+
+./test-gateway.sh
+```
+
+---
+
+### 3. Configure Antigravity Clients
+
+You can connect Antigravity (`agy` CLI and IDE) using either **Environment Variables** or an **MDM `admin_settings.json` file**:
+
+#### Option A: Environment Variables (Quick CLI Testing)
+
+```bash
+export AGY_LLM_GATEWAY_URL="https://<YOUR_APIGEE_HOSTNAME>/agy-gateway"
+export AGY_LLM_GATEWAY_API_KEY="<YOUR_APIGEE_CONSUMER_KEY>"
+export AGY_LLM_GATEWAY_MODELS="gemini-2.5-flash,gemini-2.5-pro,gemini-3-flash-preview,gemini-3.1-pro-preview,gemini-3.1-flash-lite"
+
+agy models
+agy -p "Reply with PONG"
+```
+
+#### Option B: MDM `admin_settings.json` (Enterprise Rollout)
+
+Copy [`admin_settings.example.json`](./admin_settings.example.json) to your OS-level Antigravity MDM path (with `chmod 644` on macOS/Linux):
+- **macOS**: `/Library/Application Support/Antigravity/admin_settings.json`
+- **Linux**: `/etc/antigravity/admin_settings.json`
+- **Windows**: `C:\ProgramData\Antigravity\admin_settings.json`
+
+```json
+{
+  "gateway": {
+    "enabled": true,
+    "url": "https://<YOUR_APIGEE_HOSTNAME>/agy-gateway",
+    "apiKey": "<YOUR_APIGEE_CONSUMER_KEY>",
+    "wireProtocol": "genai",
+    "customHeaders": {
+      "X-Cost-Center": "Platform-Engineering"
+    }
+  },
+  "models": {
+    "defaultModelId": "gemini-2.5-flash",
+    "list": [
+      { "modelId": "gemini-2.5-flash" },
+      { "modelId": "gemini-2.5-pro" },
+      { "modelId": "gemini-3-flash-preview" },
+      { "modelId": "gemini-3.1-pro-preview" },
+      { "modelId": "gemini-3.1-flash-lite" }
+    ]
+  }
+}
+```
+
+---
+
+## Managing Allowed Models & Per-Department Token Quotas
+
+All model access control and token quota limits are externalized in [`api-product.json`](./api-product.json) under `llmOperationGroup.operationConfigs`.
+
+### 1. How to Add or Remove Allowed Models
+Each entry in `llmOperationGroup.operationConfigs` authorizes a specific Gemini model ID and defines its token quota:
+```json
+{
+  "apiSource": "agy-gateway",
+  "llmOperations": [
+    {
+      "resource": "/**",
+      "methods": ["POST"],
+      "model": "gemini-2.5-flash"
+    }
+  ],
+  "llmTokenQuota": {
+    "limit": "1000000",
+    "interval": "1",
+    "timeUnit": "day"
+  }
+}
+```
+- **Allowing a Model**: Add an object to `llmOperationGroup.operationConfigs` with `"model": "<MODEL_ID>"` (and include that `"modelId"` in `admin_settings.json` under `models.list`).
+- **Blocking a Model**: Any model **not** listed in the API Product (for example, `gemini-1.5-flash`) is automatically rejected at the gateway by the **VerifyAPIKey** policy with `InvalidAPICallAsNoApiProductMatchFound`.
+
+### 2. How the Token Limit Applies to the Department (`X-Cost-Center`) in `admin_settings.json`
+1. In `admin_settings.json`, the department or team is configured as a custom header:
+   ```json
+   "customHeaders": {
+     "X-Cost-Center": "Platform-Engineering"
+   }
+   ```
+2. On every request, the gateway extracts `X-Cost-Center` from the header and the target model from the request path.
+3. The **LLM Token Quota** policy uses the `X-Cost-Center` and model combination as an identifier against the quota limits configured in the API Product:
+   - Each unique `X-Cost-Center` department (`Platform-Engineering`, `Data-Science`, etc.) gets its own independent token quota bucket per model defined by `llmTokenQuota` in [`api-product.json`](./api-product.json) (e.g., `1,000,000` tokens per `1` `day`).
+   - To change a model's token budget, edit `"limit"`, `"interval"`, or `"timeUnit"` (`minute`, `hour`, `day`, `month`) in [`api-product.json`](./api-product.json) and re-run `./deploy.sh`.

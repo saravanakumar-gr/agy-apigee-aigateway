@@ -1,0 +1,49 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<AssignMessage async="false" continueOnError="false" enabled="true" name="AM-PrepareTargetRequest">
+    <DisplayName>AM-PrepareTargetRequest</DisplayName>
+    <Properties/>
+    <!-- Do not copy pathsuffix automatically; target.url constructs the full Vertex AI URL -->
+    <AssignVariable>
+        <Name>target.copy.pathsuffix</Name>
+        <Value>false</Value>
+    </AssignVariable>
+    <AssignVariable>
+        <Name>target.copy.queryparams</Name>
+        <Value>true</Value>
+    </AssignVariable>
+    <AssignVariable>
+        <Name>target.url</Name>
+        <Template>https://aiplatform.googleapis.com/v1beta1/projects/{organization.name}/locations/global/publishers/google/models/{model_name}:{model_action}?{request.querystring}</Template>
+    </AssignVariable>
+    <!-- Normalize Vertex AI thinkingConfig when thinkingBudget=0 using built-in replaceAll() template function -->
+    <AssignVariable>
+        <Name>norm_regex</Name>
+        <Value>"includeThoughts"\s*:\s*true\s*,\s*"thinkingBudget"\s*:\s*0</Value>
+    </AssignVariable>
+    <AssignVariable>
+        <Name>norm_replacement</Name>
+        <Value>"includeThoughts":false,"thinkingBudget":0</Value>
+    </AssignVariable>
+    <AssignVariable>
+        <Name>request.content</Name>
+        <Template>{replaceAll(request.content,norm_regex,norm_replacement)}</Template>
+    </AssignVariable>
+    <!-- Strip client gateway credentials so GoogleAccessToken injects the Service Account OAuth token -->
+    <Remove>
+        <Headers>
+            <Header name="Authorization"/>
+            <Header name="x-api-key"/>
+            <Header name="x-goog-api-key"/>
+        </Headers>
+        <QueryParams>
+            <QueryParam name="key"/>
+        </QueryParams>
+    </Remove>
+    <Set>
+        <Headers>
+            <Header name="X-Goog-User-Project">{organization.name}</Header>
+        </Headers>
+    </Set>
+    <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
+    <AssignTo createNew="false" transport="http" type="request"/>
+</AssignMessage>

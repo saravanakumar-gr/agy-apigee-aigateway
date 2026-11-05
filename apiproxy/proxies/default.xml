@@ -1,0 +1,59 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ProxyEndpoint name="default">
+    <Description>Antigravity Enterprise Gateway ProxyEndpoint (100% Declarative Policies)</Description>
+    <FaultRules/>
+    <PreFlow name="PreFlow">
+        <Request>
+            <Step>
+                <Name>EV-ExtractRequestMetadata</Name>
+            </Step>
+            <Step>
+                <Name>VA-VerifyAPIKey</Name>
+            </Step>
+            <Step>
+                <Name>LQ-LLMTokenQuota-Enforce</Name>
+                <Condition>(request.verb = "POST") and (model_name != null)</Condition>
+            </Step>
+        </Request>
+        <Response/>
+    </PreFlow>
+    <Flows>
+        <Flow name="TelemetryAcknowledge">
+            <Description>Acknowledge Antigravity IDE telemetry calls (POST /v1beta:*) per Enterprise Gateway spec</Description>
+            <Request/>
+            <Response>
+                <Step>
+                    <Name>AM-TelemetryResponse</Name>
+                </Step>
+            </Response>
+            <Condition>(request.verb = "POST") and (proxy.pathsuffix JavaRegex "^/v1beta:.*")</Condition>
+        </Flow>
+    </Flows>
+    <PostFlow name="PostFlow">
+        <Request/>
+        <Response>
+            <Step>
+                <Name>EV-ExtractTokenUsage</Name>
+                <Condition>(request.verb = "POST") and (model_name != null)</Condition>
+            </Step>
+            <Step>
+                <Name>LQ-LLMTokenQuota-Count</Name>
+                <Condition>(request.verb = "POST") and (model_name != null) and (llm_total_tokens != null)</Condition>
+            </Step>
+            <Step>
+                <Name>DC-CaptureGatewayAnalytics</Name>
+                <Condition>(request.verb = "POST") and (model_name != null)</Condition>
+            </Step>
+        </Response>
+    </PostFlow>
+    <HTTPProxyConnection>
+        <BasePath>/agy-gateway</BasePath>
+        <Properties/>
+    </HTTPProxyConnection>
+    <RouteRule name="NoRoute-Telemetry">
+        <Condition>(request.verb = "POST") and (proxy.pathsuffix JavaRegex "^/v1beta:.*")</Condition>
+    </RouteRule>
+    <RouteRule name="DefaultRoute">
+        <TargetEndpoint>default</TargetEndpoint>
+    </RouteRule>
+</ProxyEndpoint>
