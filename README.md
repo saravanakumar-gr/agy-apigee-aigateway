@@ -149,10 +149,16 @@ Each entry in `llmOperationGroup.operationConfigs` authorizes a specific Gemini 
    - Each unique `X-Cost-Center` department (`Platform-Engineering`, `Data-Science`, etc.) gets its own independent token quota bucket per model defined by `llmTokenQuota` in [`api-product.json`](./api-product.json) (e.g., `1,000,000` tokens per `1` `day`).
    - To change a model's token budget, edit `"limit"`, `"interval"`, or `"timeUnit"` (`minute`, `hour`, `day`, `month`) in [`api-product.json`](./api-product.json) and re-run `./deploy.sh`.
 
-### 3. (Optional) Automatically Injecting Workstation & User Details into `admin_settings.json` via MDM
+---
+
+## Optional: Automatically Injecting Workstation & User Details into `admin_settings.json` via MDM
+
+> [!NOTE]
+> **Optional Configuration (Not Required):** The default gateway setup works out of the box using `X-Cost-Center` as shown above. This section is **optional** and only needed if you want your MDM tool to automatically populate workstation or user details (`serial number`, `hostname`, or `console user`) into `admin_settings.json`.
+
 If you want to capture device or developer identity—such as **serial number**, **hostname**, or **console user**—at the gateway layer, your MDM deployment script (Jamf Pro, Microsoft Intune, Kandji, Puppet, etc.) can dynamically query the workstation and write those values into `gateway.customHeaders` when generating `admin_settings.json`.
 
-#### Example: macOS MDM Script (Jamf / Intune / Kandji)
+### Example: macOS MDM Script (Jamf / Intune / Kandji)
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
@@ -198,7 +204,7 @@ chown root:wheel "${TARGET_FILE}"
 chmod 644 "${TARGET_FILE}"
 ```
 
-#### Example: Windows MDM Script (Microsoft Intune PowerShell)
+### Example: Windows MDM Script (Microsoft Intune PowerShell)
 ```powershell
 $Serial = (Get-CimInstance Win32_BIOS).SerialNumber
 $Hostname = $env:COMPUTERNAME
@@ -237,7 +243,7 @@ $Settings = @{
 $Settings | Set-Content -Path $TargetFile -Encoding UTF8
 ```
 
-#### What Apigee X Receives on Every Prompt
+### What Apigee X Receives on Every Prompt
 Once deployed, every Antigravity IDE or `agy` CLI call automatically sends those headers to Apigee:
 
 ```http
