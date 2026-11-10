@@ -150,8 +150,9 @@ Each entry in `llmOperationGroup.operationConfigs` authorizes a specific Gemini 
    - To change a model's token budget, edit `"limit"`, `"interval"`, or `"timeUnit"` (`minute`, `hour`, `day`, `month`) in [`api-product.json`](./api-product.json) and re-run `./deploy.sh`.
 
 ### 3. (Optional) Automatically Injecting Workstation & User Details into `admin_settings.json` via MDM
-If you want to capture device or developer identity—such as **serial number**, **hostname**, or **console user**—at the gateway layer, your MDM deployment script (Jamf Pro, Microsoft Intune, Kandji, Puppet, etc.) can dynamically query the workstation and write those values into `gateway.customHeaders` when generating `admin_settings.json`:
+If you want to capture device or developer identity—such as **serial number**, **hostname**, or **console user**—at the gateway layer, your MDM deployment script (Jamf Pro, Microsoft Intune, Kandji, Puppet, etc.) can dynamically query the workstation and write those values into `gateway.customHeaders` when generating `admin_settings.json`.
 
+#### Example: macOS MDM Script (Jamf / Intune / Kandji)
 ```bash
 #!/usr/bin/env bash
 set -euo pipefail
@@ -195,6 +196,57 @@ EOF
 # Lock permissions so root owns the file and developers have read-only access
 chown root:wheel "${TARGET_FILE}"
 chmod 644 "${TARGET_FILE}"
+```
+
+#### Example: Windows MDM Script (Microsoft Intune PowerShell)
+```powershell
+$Serial = (Get-CimInstance Win32_BIOS).SerialNumber
+$Hostname = $env:COMPUTERNAME
+$ConsoleUser = (Get-CimInstance Win32_ComputerSystem).UserName
+if (-not $ConsoleUser) { $ConsoleUser = $env:USERNAME }
+
+$TargetDir = Join-Path $env:ProgramData "Antigravity"
+$TargetFile = Join-Path $TargetDir "admin_settings.json"
+New-Item -ItemType Directory -Force -Path $TargetDir | Out-Null
+
+$Settings = @{
+  gateway = @{
+    enabled = $true
+    url = "https://<YOUR_APIGEE_HOSTNAME>/agy-gateway"
+    apiKey = "<YOUR_APIGEE_CONSUMER_KEY>"
+    wireProtocol = "genai"
+    customHeaders = @{
+      "X-Cost-Center"          = "Platform-Engineering"
+      "X-Console-User"         = $ConsoleUser
+      "X-Workstation-Serial"   = $Serial
+      "X-Workstation-Hostname" = $Hostname
+    }
+  }
+  models = @{
+    defaultModelId = "gemini-2.5-flash"
+    list = @(
+      @{ modelId = "gemini-2.5-flash" },
+      @{ modelId = "gemini-2.5-pro" },
+      @{ modelId = "gemini-3-flash-preview" },
+      @{ modelId = "gemini-3.1-pro-preview" },
+      @{ modelId = "gemini-3.1-flash-lite" }
+    )
+  }
+} | ConvertTo-Json -Depth 5
+
+$Settings | Set-Content -Path $TargetFile -Encoding UTF8
+```
+
+#### What Apigee X Receives on Every Prompt
+Once deployed, every Antigravity IDE or `agy` CLI call automatically sends those headers to Apigee:
+
+```http
+POST /agy-gateway/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse HTTP/1.1
+Authorization: Bearer <YOUR_APIGEE_CONSUMER_KEY>
+X-Cost-Center: Platform-Engineering
+X-Console-User: saravana
+X-Workstation-Serial: C02XYZ123456
+X-Workstation-Hostname: macbook-pro-saravana
 ```
 
 > **Updating the Apigee Quota Identifier:**  
