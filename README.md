@@ -8,6 +8,12 @@ This repository contains a sample template to serve as a reference implementatio
 
 ---
 
+## Architecture Overview
+
+![Apigee X Enterprise AI Gateway Architecture](./architecture.png)
+
+---
+
 ## How This Satisfies All Enterprise Gateway Requirements
 
 | Enterprise Gateway Requirement | How Apigee X (`agy-gateway`) Implements It |
