@@ -148,3 +148,56 @@ Each entry in `llmOperationGroup.operationConfigs` authorizes a specific Gemini 
 3. The **LLM Token Quota** policy uses the `X-Cost-Center` and model combination as an identifier against the quota limits configured in the API Product:
    - Each unique `X-Cost-Center` department (`Platform-Engineering`, `Data-Science`, etc.) gets its own independent token quota bucket per model defined by `llmTokenQuota` in [`api-product.json`](./api-product.json) (e.g., `1,000,000` tokens per `1` `day`).
    - To change a model's token budget, edit `"limit"`, `"interval"`, or `"timeUnit"` (`minute`, `hour`, `day`, `month`) in [`api-product.json`](./api-product.json) and re-run `./deploy.sh`.
+
+### 3. (Optional) Automatically Injecting Workstation & User Details into `admin_settings.json` via MDM
+If you want to capture device or developer identity—such as **serial number**, **hostname**, or **console user**—at the gateway layer, your MDM deployment script (Jamf Pro, Microsoft Intune, Kandji, Puppet, etc.) can dynamically query the workstation and write those values into `gateway.customHeaders` when generating `admin_settings.json`:
+
+```bash
+#!/usr/bin/env bash
+set -euo pipefail
+
+# Sample macOS MDM script to dynamically inject workstation & user details
+SERIAL_NUM=$(ioreg -rd1 -c IOPlatformExpertDevice | awk -F'"' '/IOPlatformSerialNumber/{print $4}')
+HOSTNAME=$(scutil --get LocalHostName 2>/dev/null || hostname -s)
+CONSOLE_USER=$(stat -f "%Su" /dev/console)
+
+TARGET_DIR="/Library/Application Support/Antigravity"
+TARGET_FILE="${TARGET_DIR}/admin_settings.json"
+mkdir -p "${TARGET_DIR}"
+
+cat <<EOF > "${TARGET_FILE}"
+{
+  "gateway": {
+    "enabled": true,
+    "url": "https://<YOUR_APIGEE_HOSTNAME>/agy-gateway",
+    "apiKey": "<YOUR_APIGEE_CONSUMER_KEY>",
+    "wireProtocol": "genai",
+    "customHeaders": {
+      "X-Cost-Center": "Platform-Engineering",
+      "X-Console-User": "${CONSOLE_USER}",
+      "X-Workstation-Serial": "${SERIAL_NUM}",
+      "X-Workstation-Hostname": "${HOSTNAME}"
+    }
+  },
+  "models": {
+    "defaultModelId": "gemini-2.5-flash",
+    "list": [
+      { "modelId": "gemini-2.5-flash" },
+      { "modelId": "gemini-2.5-pro" },
+      { "modelId": "gemini-3-flash-preview" },
+      { "modelId": "gemini-3.1-pro-preview" },
+      { "modelId": "gemini-3.1-flash-lite" }
+    ]
+  }
+}
+EOF
+
+# Lock permissions so root owns the file and developers have read-only access
+chown root:wheel "${TARGET_FILE}"
+chmod 644 "${TARGET_FILE}"
+```
+
+> **Updating the Apigee Quota Identifier:**  
+> Once these custom headers are added to `admin_settings.json`, if you want to enforce token quotas per user or per workstation (instead of per department), simply:
+> 1. Extract the new header (e.g., `X-Console-User` or `X-Workstation-Serial`) into a variable in [`EV-ExtractRequestMetadata.xml`](./apiproxy/policies/EV-ExtractRequestMetadata.xml).
+> 2. Update `<Identifier ref="..."/>` in the **LLM Token Quota** policies ([`LQ-LLMTokenQuota-Enforce.xml`](./apiproxy/policies/LQ-LLMTokenQuota-Enforce.xml) and [`LQ-LLMTokenQuota-Count.xml`](./apiproxy/policies/LQ-LLMTokenQuota-Count.xml)) to reference that extracted variable.
