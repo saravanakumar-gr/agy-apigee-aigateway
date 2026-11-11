@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<LLMTokenQuota continueOnError="true" enabled="true" name="LQ-LLMTokenQuota-Count-SSE">
+    <DisplayName>LQ-LLMTokenQuota-Count-SSE</DisplayName>
+    <CountOnly>true</CountOnly>
+    <Identifier ref="cost_center"/>
+    <LLMModelSource>{model_name}</LLMModelSource>
+    <LLMTokenUsageSource>{jsonPath(token_json_path,response.event.current.data)}</LLMTokenUsageSource>
+    <SharedName>AGY-Gateway-LLMTokenQuota</SharedName>
+    <UseQuotaConfigInAPIProduct stepName="VA-VerifyAPIKey">
+        <DefaultConfig>
+            <Allow>1000000</Allow>
+            <Interval>1</Interval>
+            <TimeUnit>day</TimeUnit>
+        </DefaultConfig>
+    </UseQuotaConfigInAPIProduct>
+</LLMTokenQuota>

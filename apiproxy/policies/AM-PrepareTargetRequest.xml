@@ -15,6 +15,10 @@
         <Name>target.url</Name>
         <Template>https://aiplatform.googleapis.com/v1beta1/projects/{organization.name}/locations/global/publishers/google/models/{model_name}:{model_action}?{request.querystring}</Template>
     </AssignVariable>
+    <AssignVariable>
+        <Name>token_json_path</Name>
+        <Value>$.usageMetadata.totalTokenCount</Value>
+    </AssignVariable>
     <!-- Strip client gateway credentials so GoogleAccessToken injects the Service Account OAuth token -->
     <Remove>
         <Headers>

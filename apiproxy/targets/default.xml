@@ -15,6 +15,18 @@
         <Request/>
         <Response/>
     </PostFlow>
+    <EventFlow content-type="text/event-stream">
+        <Response>
+            <Step>
+                <Name>LQ-LLMTokenQuota-Count-SSE</Name>
+                <Condition>(model_name != null) and (response.event.current.data != null)</Condition>
+            </Step>
+            <Step>
+                <Name>DC-CaptureGatewayAnalytics</Name>
+                <Condition>(model_name != null) and (llmTokenQuota.response.token.count != null)</Condition>
+            </Step>
+        </Response>
+    </EventFlow>
     <HTTPTargetConnection>
         <Properties>
             <Property name="connect.timeout.millis">10000</Property>

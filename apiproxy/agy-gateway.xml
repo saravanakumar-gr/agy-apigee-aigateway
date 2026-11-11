@@ -10,6 +10,7 @@
         <Policy>AM-PrepareTargetRequest</Policy>
         <Policy>EV-ExtractTokenUsage</Policy>
         <Policy>LQ-LLMTokenQuota-Count</Policy>
+        <Policy>LQ-LLMTokenQuota-Count-SSE</Policy>
         <Policy>DC-CaptureGatewayAnalytics</Policy>
         <Policy>AM-TelemetryResponse</Policy>
     </Policies>

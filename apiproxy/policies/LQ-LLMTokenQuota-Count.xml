@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<LLMTokenQuota continueOnError="false" enabled="true" name="LQ-LLMTokenQuota-Count">
+<LLMTokenQuota continueOnError="true" enabled="true" name="LQ-LLMTokenQuota-Count">
     <DisplayName>LQ-LLMTokenQuota-Count</DisplayName>
     <CountOnly>true</CountOnly>
     <Identifier ref="cost_center"/>

@@ -42,7 +42,7 @@
             </Step>
             <Step>
                 <Name>DC-CaptureGatewayAnalytics</Name>
-                <Condition>(request.verb = "POST") and (model_name != null)</Condition>
+                <Condition>(request.verb = "POST") and (model_name != null) and (llm_total_tokens != null)</Condition>
             </Step>
         </Response>
     </PostFlow>

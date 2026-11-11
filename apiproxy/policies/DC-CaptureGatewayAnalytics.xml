@@ -7,7 +7,7 @@
         <DataCollector>dc_ax_model_used</DataCollector>
     </Capture>
     <Capture>
-        <Collect ref="llm_total_tokens" default="0"/>
+        <Collect ref="llmTokenQuota.response.token.count" default="0"/>
         <DataCollector>dc_tokens</DataCollector>
     </Capture>
     <Capture>

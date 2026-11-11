@@ -4,10 +4,6 @@
     <Properties/>
     <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
     <Source clearPayload="false">response</Source>
-    <Variable name="response.content">
-        <Pattern ignoreCase="true">*"totalTokenCount": {llm_total_tokens},*</Pattern>
-        <Pattern ignoreCase="true">*"totalTokenCount":{llm_total_tokens},*</Pattern>
-    </Variable>
     <JSONPayload>
         <Variable name="llm_total_tokens" type="integer">
             <JSONPath>$.usageMetadata.totalTokenCount</JSONPath>
