@@ -72,22 +72,25 @@ else
 fi
 
 echo ""
-echo "==> Test 4: Approved Model SSE Streaming (gemini-3.8-flash + X-Cost-Center: ${COST_CENTER})"
-RES_4=$(curl -s -X POST \
-  "${GATEWAY_URL}/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse" \
-  -H "Authorization: Bearer ${API_KEY}" \
-  -H "X-Cost-Center: ${COST_CENTER}" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "contents":[{"role":"user","parts":[{"text":"Reply with PONG"}]}],
-    "generationConfig":{"thinkingConfig":{"includeThoughts":true,"thinkingBudget":0}}
-  }')
-if echo "${RES_4}" | grep -q "PONG"; then
-  echo "    [PASS] Received streamed SSE response containing PONG."
-else
-  echo "    [FAIL] Expected PONG in SSE response, got: ${RES_4}"
-  exit 1
-fi
+echo "==> Test 4: Approved Models SSE Streaming with thinkingLevel (gemini-3.8-flash, gemini-3.7-flash, gemini-4-argon)"
+for MODEL in "gemini-3.8-flash" "gemini-3.7-flash" "gemini-4-argon"; do
+  echo "    -> Testing ${MODEL} (thinkingLevel: LOW)..."
+  RES_4=$(curl -s -X POST \
+    "${GATEWAY_URL}/v1beta/models/${MODEL}:streamGenerateContent?alt=sse" \
+    -H "Authorization: Bearer ${API_KEY}" \
+    -H "X-Cost-Center: ${COST_CENTER}" \
+    -H "Content-Type: application/json" \
+    -d '{
+      "contents":[{"role":"user","parts":[{"text":"Reply with PONG"}]}],
+      "generationConfig":{"thinkingConfig":{"includeThoughts":true,"thinkingLevel":"LOW"}}
+    }')
+  if echo "${RES_4}" | grep -q "PONG"; then
+    echo "       [PASS] ${MODEL} returned streamed SSE response containing PONG."
+  else
+    echo "       [FAIL] Expected PONG in SSE response for ${MODEL}, got: ${RES_4}"
+    exit 1
+  fi
+done
 
 echo ""
 echo "=============================================================================="

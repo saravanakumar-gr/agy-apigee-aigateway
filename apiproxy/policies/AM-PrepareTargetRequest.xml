@@ -15,19 +15,6 @@
         <Name>target.url</Name>
         <Template>https://aiplatform.googleapis.com/v1beta1/projects/{organization.name}/locations/global/publishers/google/models/{model_name}:{model_action}?{request.querystring}</Template>
     </AssignVariable>
-    <!-- Normalize Vertex AI thinkingConfig when thinkingBudget=0 using built-in replaceAll() template function -->
-    <AssignVariable>
-        <Name>norm_regex</Name>
-        <Value>"includeThoughts"\s*:\s*true\s*,\s*"thinkingBudget"\s*:\s*0</Value>
-    </AssignVariable>
-    <AssignVariable>
-        <Name>norm_replacement</Name>
-        <Value>"includeThoughts":false,"thinkingBudget":0</Value>
-    </AssignVariable>
-    <AssignVariable>
-        <Name>request.content</Name>
-        <Template>{replaceAll(request.content,norm_regex,norm_replacement)}</Template>
-    </AssignVariable>
     <!-- Strip client gateway credentials so GoogleAccessToken injects the Service Account OAuth token -->
     <Remove>
         <Headers>
