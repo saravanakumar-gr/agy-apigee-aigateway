@@ -72,7 +72,7 @@ You can connect Antigravity (`agy` CLI and IDE) using either **Environment Varia
 ```bash
 export AGY_LLM_GATEWAY_URL="https://<YOUR_APIGEE_HOSTNAME>/agy-gateway"
 export AGY_LLM_GATEWAY_API_KEY="<YOUR_APIGEE_CONSUMER_KEY>"
-export AGY_LLM_GATEWAY_MODELS="gemini-4-carbon,gemini-4-argon,gemini-3.8-flash,gemini-3.7-flash,gemini-3.6-flash,gemini-3.5-flash,gemini-3.5-flash-lite,gemini-3.1-pro-preview,gemini-3.1-flash-lite,gemini-3-flash-preview,gemini-2.5-pro,gemini-2.5-flash"
+export AGY_LLM_GATEWAY_MODELS="gemini-3.8-flash,gemini-3.7-flash,gemini-4-argon"
 
 agy models
 agy -p "Reply with PONG"
@@ -97,20 +97,11 @@ Copy [`admin_settings.example.json`](./admin_settings.example.json) to your OS-l
     }
   },
   "models": {
-    "defaultModelId": "gemini-3.8-flash",
+    "defaultModelId": "gemini-4-argon",
     "list": [
-      { "modelId": "gemini-4-carbon" },
-      { "modelId": "gemini-4-argon" },
       { "modelId": "gemini-3.8-flash" },
       { "modelId": "gemini-3.7-flash" },
-      { "modelId": "gemini-3.6-flash" },
-      { "modelId": "gemini-3.5-flash" },
-      { "modelId": "gemini-3.5-flash-lite" },
-      { "modelId": "gemini-3.1-pro-preview" },
-      { "modelId": "gemini-3.1-flash-lite" },
-      { "modelId": "gemini-3-flash-preview" },
-      { "modelId": "gemini-2.5-pro" },
-      { "modelId": "gemini-2.5-flash" }
+      { "modelId": "gemini-4-argon" }
     ]
   }
 }
@@ -123,22 +114,13 @@ Copy [`admin_settings.example.json`](./admin_settings.example.json) to your OS-l
 All model access control and token quota limits are externalized in [`api-product.json`](./api-product.json) under `llmOperationGroup.operationConfigs`.
 
 ### 1. Pre-Configured Allowed Models (`api-product.json`)
-By default, [`api-product.json`](./api-product.json) and [`admin_settings.example.json`](./admin_settings.example.json) include the latest supported Gemini models for Antigravity Enterprise:
+By default, [`api-product.json`](./api-product.json) and [`admin_settings.example.json`](./admin_settings.example.json) include the following Gemini models for Antigravity Enterprise:
 
 | Model Name | CLI / API Model ID (`modelId`) | Default Quota (`api-product.json`) |
 | :--- | :--- | :--- |
-| **Gemini 4 Carbon** | `gemini-4-carbon` | `1,000,000` tokens / day |
-| **Gemini 4 Argon** | `gemini-4-argon` | `1,000,000` tokens / day |
 | **Gemini 3.8 Flash** | `gemini-3.8-flash` | `1,000,000` tokens / day |
 | **Gemini 3.7 Flash** | `gemini-3.7-flash` | `1,000,000` tokens / day |
-| **Gemini 3.6 Flash** | `gemini-3.6-flash` | `1,000,000` tokens / day |
-| **Gemini 3.5 Flash** | `gemini-3.5-flash` | `1,000,000` tokens / day |
-| **Gemini 3.5 Flash-Lite** | `gemini-3.5-flash-lite` | `1,000,000` tokens / day |
-| **Gemini 3.1 Pro** | `gemini-3.1-pro-preview` | `1,000,000` tokens / day |
-| **Gemini 3.1 Flash-Lite** | `gemini-3.1-flash-lite` | `1,000,000` tokens / day |
-| **Gemini 3 Flash** | `gemini-3-flash-preview` | `1,000,000` tokens / day |
-| **Gemini 2.5 Pro** | `gemini-2.5-pro` | `1,000,000` tokens / day |
-| **Gemini 2.5 Flash** | `gemini-2.5-flash` | `1,000,000` tokens / day |
+| **Gemini 4 Argon** | `gemini-4-argon` | `1,000,000` tokens / day |
 
 ### 2. How to Add or Remove Allowed Models
 Each entry in `llmOperationGroup.operationConfigs` authorizes a specific Gemini model ID and defines its token quota:
@@ -149,7 +131,7 @@ Each entry in `llmOperationGroup.operationConfigs` authorizes a specific Gemini 
     {
       "resource": "/**",
       "methods": ["POST"],
-      "model": "gemini-3.8-flash"
+      "model": "gemini-4-argon"
     }
   ],
   "llmTokenQuota": {
@@ -212,20 +194,11 @@ cat <<EOF > "${TARGET_FILE}"
     }
   },
   "models": {
-    "defaultModelId": "gemini-3.8-flash",
+    "defaultModelId": "gemini-4-argon",
     "list": [
-      { "modelId": "gemini-4-carbon" },
-      { "modelId": "gemini-4-argon" },
       { "modelId": "gemini-3.8-flash" },
       { "modelId": "gemini-3.7-flash" },
-      { "modelId": "gemini-3.6-flash" },
-      { "modelId": "gemini-3.5-flash" },
-      { "modelId": "gemini-3.5-flash-lite" },
-      { "modelId": "gemini-3.1-pro-preview" },
-      { "modelId": "gemini-3.1-flash-lite" },
-      { "modelId": "gemini-3-flash-preview" },
-      { "modelId": "gemini-2.5-pro" },
-      { "modelId": "gemini-2.5-flash" }
+      { "modelId": "gemini-4-argon" }
     ]
   }
 }
@@ -261,20 +234,11 @@ $Settings = @{
     }
   }
   models = @{
-    defaultModelId = "gemini-3.8-flash"
+    defaultModelId = "gemini-4-argon"
     list = @(
-      @{ modelId = "gemini-4-carbon" },
-      @{ modelId = "gemini-4-argon" },
       @{ modelId = "gemini-3.8-flash" },
       @{ modelId = "gemini-3.7-flash" },
-      @{ modelId = "gemini-3.6-flash" },
-      @{ modelId = "gemini-3.5-flash" },
-      @{ modelId = "gemini-3.5-flash-lite" },
-      @{ modelId = "gemini-3.1-pro-preview" },
-      @{ modelId = "gemini-3.1-flash-lite" },
-      @{ modelId = "gemini-3-flash-preview" },
-      @{ modelId = "gemini-2.5-pro" },
-      @{ modelId = "gemini-2.5-flash" }
+      @{ modelId = "gemini-4-argon" }
     )
   }
 } | ConvertTo-Json -Depth 5
@@ -286,7 +250,7 @@ $Settings | Set-Content -Path $TargetFile -Encoding UTF8
 Once deployed, every Antigravity IDE or `agy` CLI call automatically sends those headers to Apigee:
 
 ```http
-POST /agy-gateway/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse HTTP/1.1
+POST /agy-gateway/v1beta/models/gemini-4-argon:streamGenerateContent?alt=sse HTTP/1.1
 Authorization: Bearer <YOUR_APIGEE_CONSUMER_KEY>
 X-Cost-Center: Platform-Engineering
 X-Console-User: saravana

@@ -30,7 +30,7 @@ echo "==========================================================================
 echo ""
 echo "==> Test 1: Unauthenticated Request (Expect HTTP 401 from VerifyAPIKey)"
 CODE_1=$(curl -s -o /dev/null -w "%{http_code}" -X POST \
-  "${GATEWAY_URL}/v1beta/models/gemini-2.5-flash:generateContent" \
+  "${GATEWAY_URL}/v1beta/models/gemini-3.8-flash:generateContent" \
   -H "Content-Type: application/json" \
   -d '{"contents":[{"role":"user","parts":[{"text":"Reply with PONG"}]}]}')
 echo "    HTTP Status: ${CODE_1}"
@@ -72,9 +72,9 @@ else
 fi
 
 echo ""
-echo "==> Test 4: Approved Model SSE Streaming (gemini-2.5-flash + X-Cost-Center: ${COST_CENTER})"
+echo "==> Test 4: Approved Model SSE Streaming (gemini-3.8-flash + X-Cost-Center: ${COST_CENTER})"
 RES_4=$(curl -s -X POST \
-  "${GATEWAY_URL}/v1beta/models/gemini-2.5-flash:streamGenerateContent?alt=sse" \
+  "${GATEWAY_URL}/v1beta/models/gemini-3.8-flash:streamGenerateContent?alt=sse" \
   -H "Authorization: Bearer ${API_KEY}" \
   -H "X-Cost-Center: ${COST_CENTER}" \
   -H "Content-Type: application/json" \
