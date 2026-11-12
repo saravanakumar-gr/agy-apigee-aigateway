@@ -10,7 +10,7 @@ This repository contains a sample template to serve as a reference implementatio
 
 ## Architecture Overview
 
-![Apigee X Enterprise AI Gateway Architecture](./architecture.png?v=3)
+![Apigee X Enterprise AI Gateway Architecture](./architecture.png?v=4)
 
 ---
 
