@@ -11,7 +11,7 @@
         <DataCollector>dc_tokens</DataCollector>
     </Capture>
     <Capture>
-        <Collect ref="cost_center" default="Platform-Engineering"/>
+        <Collect ref="cost_center" default="Unassigned"/>
         <DataCollector>dc_cost_center</DataCollector>
     </Capture>
 </DataCapture>

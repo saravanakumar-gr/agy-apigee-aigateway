@@ -6,6 +6,7 @@
     <Policies>
         <Policy>EV-ExtractRequestMetadata</Policy>
         <Policy>VA-VerifyAPIKey</Policy>
+        <Policy>AM-ResolveDeveloperMetadata</Policy>
         <Policy>LQ-LLMTokenQuota-Enforce</Policy>
         <Policy>AM-PrepareTargetRequest</Policy>
         <Policy>EV-ExtractTokenUsage</Policy>

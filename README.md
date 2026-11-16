@@ -22,8 +22,8 @@ This repository contains a sample template to serve as a reference implementatio
 | **2. SSE Streaming & Thinking Level Support**<br>(`:streamGenerateContent?alt=sse`) | Forwards SSE streams (`text/event-stream`) and `thinkingConfig` (`thinkingLevel`: `LOW`, `MEDIUM`, `HIGH`) directly to Vertex AI (`gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-4-argon`), extracting SSE token usage via `<EventFlow content-type="text/event-stream">` and `response.event.current.data`. |
 | **3. Acknowledge IDE Telemetry Endpoints**<br>(`POST /v1beta:*` $\rightarrow$ `HTTP 200 OK` `{}`) | Handled via a loopback `<RouteRule>` and `AssignMessage` policy so Antigravity IDE telemetry pings (`POST /v1beta:recordTelemetry`) return `200 OK` `{}` without hitting Vertex AI. |
 | **4. Multi-Header API Key Auth**<br>(`Authorization: Bearer <KEY>`, `x-goog-api-key`, `?key=`) | Extracts the API key from `Authorization: Bearer <KEY>` (or `x-goog-api-key` / `?key=`) and validates it via **VerifyAPIKey** against the Apigee API Product (`api-product.json`). |
-| **5. Model Allowlisting & Per-Department Token Quotas** | Enforces strict model allowlisting and daily token budgets per `(X-Cost-Center, model)` combination using Apigee's **LLM Token Quota** policy and [`api-product.json`](./api-product.json). |
-| **6. FinOps Chargeback Analytics** | Captures the requested model (`dc_ax_model_used`), consumed tokens (`dc_tokens`), and department (`dc_cost_center`) directly into **Apigee Analytics** via **DataCapture**. |
+| **5. Model Allowlisting & Per-Employee Token Quotas** | Enforces strict model allowlisting and daily token budgets per `(developer.email, model)` combination using Apigee's **LLM Token Quota** policy and [`api-product.json`](./api-product.json). |
+| **6. FinOps Chargeback Analytics** | Resolves `cost_center` from the Developer (employee) custom attribute `x-cost-center` (falling back to the `X-Cost-Center` request header if absent) and captures `dc_ax_model_used`, `dc_tokens`, and `dc_cost_center` into **Apigee Analytics** via **DataCapture**. |
 
 ---
 
@@ -46,7 +46,7 @@ export APIGEE_HOST="<YOUR_APIGEE_HOSTNAME>"
 2. Creates the Apigee Analytics Data Collectors (`dc_ax_model_used`, `dc_tokens`, `dc_cost_center`).
 3. Packages, imports, and deploys the `agy-gateway` proxy bundle.
 4. Configures the API Product (`agy-gateway-product`) from [`api-product.json`](./api-product.json).
-5. Creates the Developer and Developer App (`agy-gateway-app`) and prints your **Consumer API Key**.
+5. Creates the Developer (with custom attribute `x-cost-center`) and Developer App (`agy-gateway-app`) and prints your **Consumer API Key**.
 
 ---
 
@@ -144,17 +144,15 @@ Each entry in `llmOperationGroup.operationConfigs` authorizes a specific Gemini 
 - **Allowing a Model**: Add an object to `llmOperationGroup.operationConfigs` with `"model": "<MODEL_ID>"` (and include that `"modelId"` in `admin_settings.json` under `models.list`).
 - **Blocking a Model**: Any model **not** listed in the API Product (for example, `gemini-1.5-flash`) is automatically rejected at the gateway by the **VerifyAPIKey** policy with `InvalidAPICallAsNoApiProductMatchFound`.
 
-### 3. How the Token Limit Applies to the Department (`X-Cost-Center`) in `admin_settings.json`
-1. In `admin_settings.json`, the department or team is configured as a custom header:
-   ```json
-   "customHeaders": {
-     "X-Cost-Center": "Platform-Engineering"
-   }
-   ```
-2. On every request, the gateway extracts `X-Cost-Center` from the header and the target model from the request path.
-3. The **LLM Token Quota** policy uses the `X-Cost-Center` and model combination as an identifier against the quota limits configured in the API Product:
-   - Each unique `X-Cost-Center` department (`Platform-Engineering`, `Data-Science`, etc.) gets its own independent token quota bucket per model defined by `llmTokenQuota` in [`api-product.json`](./api-product.json) (e.g., `1,000,000` tokens per `1` `day`).
+### 3. Per-Employee Token Quotas (`developer.email`) & Cost-Center Resolution (`x-cost-center`)
+1. **Per-Employee Quota Enforcement (`developer.email`)**:
+   - When **VerifyAPIKey** (`VA-VerifyAPIKey`) validates the consumer key, Apigee populates `verifyapikey.VA-VerifyAPIKey.developer.email` (the employee's email ID).
+   - The **LLM Token Quota** policies (`LQ-LLMTokenQuota-Enforce`, `LQ-LLMTokenQuota-Count`, and `LQ-LLMTokenQuota-Count-SSE`) use `<Identifier ref="verifyapikey.VA-VerifyAPIKey.developer.email"/>`, giving each employee their own independent daily token budget per model as defined in [`api-product.json`](./api-product.json).
    - To change a model's token budget, edit `"limit"`, `"interval"`, or `"timeUnit"` (`minute`, `hour`, `day`, `month`) in [`api-product.json`](./api-product.json) and re-run `./deploy.sh`.
+2. **Developer Custom Attribute `x-cost-center` with Header Fallback**:
+   - Each Apigee Developer (employee) can have a custom attribute `x-cost-center` (e.g., `Platform-Engineering`), exposed at runtime as `verifyapikey.VA-VerifyAPIKey.developer.x-cost-center`.
+   - [`AM-ResolveDeveloperMetadata.xml`](./apiproxy/policies/AM-ResolveDeveloperMetadata.xml) sets `cost_center` from the Developer's `x-cost-center` custom attribute when present; if the custom attribute is not set on the Developer profile, `cost_center` automatically falls back to the `X-Cost-Center` request header extracted by [`EV-ExtractRequestMetadata.xml`](./apiproxy/policies/EV-ExtractRequestMetadata.xml).
+   - Finally, [`DC-CaptureGatewayAnalytics.xml`](./apiproxy/policies/DC-CaptureGatewayAnalytics.xml) pushes `cost_center` into Apigee Analytics (`dc_cost_center`) alongside `dc_ax_model_used` and `dc_tokens` (while `developer.email` is natively recorded by Apigee Analytics).
 
 ---
 

@@ -23,6 +23,7 @@ SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 PRODUCT_FILE="${PRODUCT_FILE:-${SCRIPT_DIR}/api-product.json}"
 PRODUCT_NAME="$(python3 -c "import json; print(json.load(open('${PRODUCT_FILE}'))['name'])")"
 DEV_EMAIL="${DEV_EMAIL:-admin@example.com}"
+DEV_COST_CENTER="${DEV_COST_CENTER:-Platform-Engineering}"
 APP_NAME="${APP_NAME:-agy-gateway-app}"
 
 echo "==> 1. Obtaining Google Cloud Access Token..."
@@ -107,13 +108,26 @@ else
     -d "${PRODUCT_PAYLOAD}" >/dev/null
 fi
 
-echo "==> 8. Ensuring Developer (${DEV_EMAIL}) & Developer App (${APP_NAME}) exist..."
+echo "==> 8. Ensuring Developer (${DEV_EMAIL}, x-cost-center=${DEV_COST_CENTER}) & Developer App (${APP_NAME}) exist..."
 DEV_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${TOKEN}" \
   "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/developers/${DEV_EMAIL}")
 if [ "${DEV_CODE}" != "200" ]; then
   curl -s -X POST -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" \
     "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/developers" \
-    -d "{\"email\":\"${DEV_EMAIL}\",\"firstName\":\"Antigravity\",\"lastName\":\"Admin\",\"userName\":\"agy-admin\"}" >/dev/null
+    -d "{\"email\":\"${DEV_EMAIL}\",\"firstName\":\"Antigravity\",\"lastName\":\"Admin\",\"userName\":\"agy-admin\",\"attributes\":[{\"name\":\"x-cost-center\",\"value\":\"${DEV_COST_CENTER}\"}]}" >/dev/null
+else
+  python3 -c "
+import json, urllib.request
+headers = {'Authorization': 'Bearer ${TOKEN}', 'Content-Type': 'application/json'}
+url = 'https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/developers/${DEV_EMAIL}'
+with urllib.request.urlopen(urllib.request.Request(url, headers=headers)) as r:
+    dev = json.loads(r.read())
+attrs = dev.get('attributes', [])
+if not any(a.get('name') == 'x-cost-center' for a in attrs):
+    attrs.append({'name': 'x-cost-center', 'value': '${DEV_COST_CENTER}'})
+    dev['attributes'] = attrs
+    urllib.request.urlopen(urllib.request.Request(url, data=json.dumps(dev).encode(), headers=headers, method='PUT')).read()
+"
 fi
 
 APP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${TOKEN}" \
