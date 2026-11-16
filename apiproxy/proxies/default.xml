@@ -33,16 +33,12 @@
         <Request/>
         <Response>
             <Step>
-                <Name>EV-ExtractTokenUsage</Name>
-                <Condition>(request.verb = "POST") and (model_name != null)</Condition>
-            </Step>
-            <Step>
                 <Name>LQ-LLMTokenQuota-Count</Name>
-                <Condition>(request.verb = "POST") and (model_name != null) and (llm_total_tokens != null)</Condition>
+                <Condition>(request.verb = "POST") and (model_name != null) and !(response.header.Content-Type =| "text/event-stream")</Condition>
             </Step>
             <Step>
                 <Name>DC-CaptureGatewayAnalytics</Name>
-                <Condition>(request.verb = "POST") and (model_name != null) and (llm_total_tokens != null)</Condition>
+                <Condition>(request.verb = "POST") and (model_name != null) and !(response.header.Content-Type =| "text/event-stream")</Condition>
             </Step>
         </Response>
     </PostFlow>

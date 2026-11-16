@@ -7,8 +7,13 @@
         <DataCollector>dc_ax_model_used</DataCollector>
     </Capture>
     <Capture>
-        <Collect ref="llmTokenQuota.response.token.count" default="0"/>
         <DataCollector>dc_tokens</DataCollector>
+        <Collect default="0">
+            <Source>response.event.current.data</Source>
+            <JSONPayload>
+                <JSONPath>$.usageMetadata.totalTokenCount</JSONPath>
+            </JSONPayload>
+        </Collect>
     </Capture>
     <Capture>
         <Collect ref="cost_center" default="Unassigned"/>

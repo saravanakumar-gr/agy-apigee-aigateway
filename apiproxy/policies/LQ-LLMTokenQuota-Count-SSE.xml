@@ -4,7 +4,7 @@
     <CountOnly>true</CountOnly>
     <Identifier ref="verifyapikey.VA-VerifyAPIKey.developer.email"/>
     <LLMModelSource>{model_name}</LLMModelSource>
-    <LLMTokenUsageSource>{jsonPath(token_json_path,response.event.current.data)}</LLMTokenUsageSource>
+    <LLMTokenUsageSource>{jsonPath('$.usageMetadata.totalTokenCount',response.event.current.data,true)}</LLMTokenUsageSource>
     <SharedName>AGY-Gateway-LLMTokenQuota</SharedName>
     <UseQuotaConfigInAPIProduct stepName="VA-VerifyAPIKey">
         <DefaultConfig>

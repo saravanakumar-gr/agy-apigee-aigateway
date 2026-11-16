@@ -8,11 +8,6 @@
         <Name>target.copy.pathsuffix</Name>
         <Value>false</Value>
     </AssignVariable>
-    <!-- JSONPath variable used by LQ-LLMTokenQuota-Count-SSE inside EventFlow -->
-    <AssignVariable>
-        <Name>token_json_path</Name>
-        <Value>$.usageMetadata.totalTokenCount</Value>
-    </AssignVariable>
     <!-- Prefer Developer (employee) custom attribute 'x-cost-center'; if unresolved/absent, 'cost_center' retains the X-Cost-Center header value -->
     <AssignVariable>
         <Name>cost_center</Name>
