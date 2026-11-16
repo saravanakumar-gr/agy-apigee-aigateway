@@ -14,14 +14,30 @@ This repository contains a sample template to serve as a reference implementatio
 
 ---
 
+## Employee Identity, Unique API Keys & Governance Model
+
+In this architecture, **every employee using Antigravity (`agy` CLI or IDE) is registered as a Developer in Apigee**:
+
+1. **1 Employee = 1 Apigee Developer + 1 Unique API Key**:
+   Each employee receives their own dedicated Apigee Developer App and **unique Consumer API Key**. Administrators can track usage, audit requests, or revoke an individual employee's key at any time without impacting other developers.
+2. **Employee Email & Cost Center Bound to the API Key**:
+   Both the employee's email ID (`developer.email`) and their `x-cost-center` custom attribute (for example, `CC-1042-Payments-Core` or `CC-2085-AI-Research` in [`developers.json`](./developers.json)) are stored directly on the Developer profile in Apigee and mapped to the employee's API key at runtime by `VerifyAPIKey`:
+   - **Per-Employee Token Quotas**: `LLMTokenQuota` uses `verifyapikey.VA-VerifyAPIKey.developer.email` as its quota identifier, enforcing an independent token budget per `(employee, model)`.
+   - **Employee-Specific Model Access & Limits**: Because each employee's API key is bound to one or more Apigee API Products, admins can assign different model allowlists or higher/lower daily token budgets to specific employees or roles (e.g., standard engineering vs. AI research).
+   - **Tamper-Proof Cost Attribution with Header Fallback**: [`AM-ResolveDeveloperMetadata.xml`](./apiproxy/policies/AM-ResolveDeveloperMetadata.xml) resolves `cost_center` from the employee's Apigee Developer custom attribute (`x-cost-center`) and pushes it to Apigee Analytics (`dc_cost_center`). If the custom attribute is not set on a Developer profile, the gateway falls back to the client's `X-Cost-Center` request header.
+3. **Automated Employee Key Self-Service**:
+   Onboarding can be fully automated when an employee requests an Antigravity key (for example, through an internal developer portal, IT/ServiceNow workflow, or a GitOps pull request to [`developers.json`](./developers.json)) by running [`./provision-developers.sh`](./provision-developers.sh) or calling the Apigee Management API directly.
+
+---
+
 ## How This Satisfies All Enterprise Gateway Requirements
 
 | Enterprise Gateway Requirement | How Apigee X (`agy-gateway`) Implements It |
 | :--- | :--- |
 | **1. Preserve Client Attribution Headers**<br>(`User-Agent`, `X-Goog-Api-Client`, `X-Cost-Center`) | Apigee preserves client attribution headers verbatim by default, strips gateway credentials (`Authorization`, `x-api-key`, `x-goog-api-key`), and injects `X-Goog-User-Project`. |
-| **2. SSE Streaming & Thinking Level Support**<br>(`:streamGenerateContent?alt=sse`) | Forwards SSE streams (`text/event-stream`) and `thinkingConfig` (`thinkingLevel`: `LOW`, `MEDIUM`, `HIGH`) directly to Vertex AI (`gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-4-argon`), extracting SSE token usage via `<EventFlow content-type="text/event-stream">` and `response.event.current.data`. |
-| **3. Acknowledge IDE Telemetry Endpoints**<br>(`POST /v1beta:*` $\rightarrow$ `HTTP 200 OK` `{}`) | Handled via a loopback `<RouteRule>` and `AssignMessage` policy so Antigravity IDE telemetry pings (`POST /v1beta:recordTelemetry`) return `200 OK` `{}` without hitting Vertex AI. |
-| **4. Multi-Header API Key Auth**<br>(`Authorization: Bearer <KEY>`, `x-goog-api-key`, `?key=`) | Extracts the API key from `Authorization: Bearer <KEY>` (or `x-goog-api-key` / `?key=`) and validates it via **VerifyAPIKey** against the Apigee API Product (`api-product.json`). |
+| **2. SSE Streaming & Thinking Level Support**<br>(`:streamGenerateContent?alt=sse`) | Forwards SSE streams (`text/event-stream`) and `thinkingConfig` (`thinkingLevel`: `LOW`, `MEDIUM`, `HIGH`) directly to Gemini Platform (`gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-4-argon`), extracting SSE token usage via `<EventFlow content-type="text/event-stream">` and `response.event.current.data`. |
+| **3. Acknowledge IDE Telemetry Endpoints**<br>(`POST /v1beta:*` $\rightarrow$ `HTTP 200 OK` `{}`) | Handled via a loopback `<RouteRule>` and `AssignMessage` policy so Antigravity IDE telemetry pings (`POST /v1beta:recordTelemetry`) return `200 OK` `{}` without hitting upstream endpoints. |
+| **4. Multi-Header API Key Auth**<br>(`Authorization: Bearer <KEY>`, `x-goog-api-key`, `?key=`) | Extracts the employee's unique API key from `Authorization: Bearer <KEY>` (or `x-goog-api-key` / `?key=`) and validates it via **VerifyAPIKey** against the authorized Apigee API Product (`api-product.json`). |
 | **5. Model Allowlisting & Per-Employee Token Quotas** | Enforces strict model allowlisting and daily token budgets per `(developer.email, model)` combination using Apigee's **LLM Token Quota** policy and [`api-product.json`](./api-product.json). |
 | **6. FinOps Chargeback Analytics** | Resolves `cost_center` from the Developer (employee) custom attribute `x-cost-center` (falling back to the `X-Cost-Center` request header if absent) and captures `dc_ax_model_used`, `dc_tokens`, and `dc_cost_center` into **Apigee Analytics** via **DataCapture**. |
 
@@ -46,24 +62,78 @@ export APIGEE_HOST="<YOUR_APIGEE_HOSTNAME>"
 2. Creates the Apigee Analytics Data Collectors (`dc_ax_model_used`, `dc_tokens`, `dc_cost_center`).
 3. Packages, imports, and deploys the `agy-gateway` proxy bundle.
 4. Configures the API Product (`agy-gateway-product`) from [`api-product.json`](./api-product.json).
-5. Creates the Developer (with custom attribute `x-cost-center`) and Developer App (`agy-gateway-app`) and prints your **Consumer API Key**.
+5. Calls [`./provision-developers.sh`](./provision-developers.sh) to register the employees in [`developers.json`](./developers.json) (with their `x-cost-center` custom attribute) and prints each employee's unique **Consumer API Key**.
 
 ---
 
-### 2. Verify the Gateway (`./test-gateway.sh`)
+### 2. Provision or Onboard Employee Keys (`developers.json`)
 
-Run the automated test suite to verify authentication, telemetry acknowledgment, model allowlisting, and SSE streaming:
+Employee records and their `x-cost-center` custom attributes are defined declaratively in [`developers.json`](./developers.json):
+
+```json
+{
+  "developers": [
+    {
+      "email": "alex.rivera@example.com",
+      "firstName": "Alex",
+      "lastName": "Rivera",
+      "userName": "alex-rivera",
+      "appName": "agy-key-alex-rivera",
+      "apiProducts": [
+        "agy-gateway-product"
+      ],
+      "attributes": [
+        {
+          "name": "x-cost-center",
+          "value": "CC-1042-Payments-Core"
+        }
+      ]
+    },
+    {
+      "email": "priya.nair@example.com",
+      "firstName": "Priya",
+      "lastName": "Nair",
+      "userName": "priya-nair",
+      "appName": "agy-key-priya-nair",
+      "apiProducts": [
+        "agy-gateway-product"
+      ],
+      "attributes": [
+        {
+          "name": "x-cost-center",
+          "value": "CC-2085-AI-Research"
+        }
+      ]
+    }
+  ]
+}
+```
+
+Whenever a new employee requests an Antigravity API key (or an employee's cost center / API Product tier changes), update `developers.json` and run [`./provision-developers.sh`](./provision-developers.sh) without needing to redeploy the proxy:
+
+```bash
+export PROJECT_ID="<YOUR_GCP_PROJECT_ID>"
+./provision-developers.sh
+```
+
+This workflow can also be triggered automatically by a CI/CD pipeline (GitOps PR on `developers.json`), an internal self-service portal (Backstage), or an IT ticketing webhook (ServiceNow / Jira) when an employee requests access to Antigravity.
+
+---
+
+### 3. Verify the Gateway (`./test-gateway.sh`)
+
+Run the automated test suite using one of the provisioned employee Consumer API Keys to verify authentication, telemetry acknowledgment, model allowlisting, and SSE streaming:
 
 ```bash
 export AGY_LLM_GATEWAY_URL="https://${APIGEE_HOST}/agy-gateway"
-export AGY_LLM_GATEWAY_API_KEY="<YOUR_APIGEE_CONSUMER_KEY>"
+export AGY_LLM_GATEWAY_API_KEY="<EMPLOYEE_APIGEE_CONSUMER_KEY>"
 
 ./test-gateway.sh
 ```
 
 ---
 
-### 3. Configure Antigravity Clients
+### 4. Configure Antigravity Clients
 
 You can connect Antigravity (`agy` CLI and IDE) using either **Environment Variables** or an **MDM `admin_settings.json` file**:
 
@@ -71,7 +141,7 @@ You can connect Antigravity (`agy` CLI and IDE) using either **Environment Varia
 
 ```bash
 export AGY_LLM_GATEWAY_URL="https://<YOUR_APIGEE_HOSTNAME>/agy-gateway"
-export AGY_LLM_GATEWAY_API_KEY="<YOUR_APIGEE_CONSUMER_KEY>"
+export AGY_LLM_GATEWAY_API_KEY="<EMPLOYEE_APIGEE_CONSUMER_KEY>"
 export AGY_LLM_GATEWAY_MODELS="gemini-3.8-flash,gemini-3.7-flash,gemini-4-argon"
 
 agy models
@@ -90,10 +160,10 @@ Copy [`admin_settings.example.json`](./admin_settings.example.json) to your OS-l
   "gateway": {
     "enabled": true,
     "url": "https://<YOUR_APIGEE_HOSTNAME>/agy-gateway",
-    "apiKey": "<YOUR_APIGEE_CONSUMER_KEY>",
+    "apiKey": "<EMPLOYEE_APIGEE_CONSUMER_KEY>",
     "wireProtocol": "genai",
     "customHeaders": {
-      "X-Cost-Center": "Platform-Engineering"
+      "X-Cost-Center": "CC-1042-Payments-Core"
     }
   },
   "models": {
@@ -109,20 +179,20 @@ Copy [`admin_settings.example.json`](./admin_settings.example.json) to your OS-l
 
 ---
 
-## Managing Allowed Models & Per-Department Token Quotas
+## Managing Allowed Models, Employee Access & Token Quotas
 
-All model access control and token quota limits are externalized in [`api-product.json`](./api-product.json) under `llmOperationGroup.operationConfigs`.
+All model access control and token quota limits are externalized in [`api-product.json`](./api-product.json) under `llmOperationGroup.operationConfigs` and mapped to individual employees via [`developers.json`](./developers.json).
 
 ### 1. Pre-Configured Allowed Models (`api-product.json`)
 By default, [`api-product.json`](./api-product.json) and [`admin_settings.example.json`](./admin_settings.example.json) include the following Gemini models for Antigravity Enterprise:
 
-| Model Name | CLI / API Model ID (`modelId`) | Default Quota (`api-product.json`) |
+| Model Name | CLI / API Model ID (`modelId`) | Default Per-Employee Quota (`api-product.json`) |
 | :--- | :--- | :--- |
 | **Gemini 3.8 Flash** | `gemini-3.8-flash` | `1,000,000` tokens / day |
 | **Gemini 3.7 Flash** | `gemini-3.7-flash` | `1,000,000` tokens / day |
 | **Gemini 4 Argon** | `gemini-4-argon` | `1,000,000` tokens / day |
 
-### 2. How to Add or Remove Allowed Models
+### 2. How to Add, Remove, or Tier Allowed Models per Employee
 Each entry in `llmOperationGroup.operationConfigs` authorizes a specific Gemini model ID and defines its token quota:
 ```json
 {
@@ -141,27 +211,24 @@ Each entry in `llmOperationGroup.operationConfigs` authorizes a specific Gemini 
   }
 }
 ```
-- **Allowing a Model**: Add an object to `llmOperationGroup.operationConfigs` with `"model": "<MODEL_ID>"` (and include that `"modelId"` in `admin_settings.json` under `models.list`).
-- **Blocking a Model**: Any model **not** listed in the API Product (for example, `gemini-1.5-flash`) is automatically rejected at the gateway by the **VerifyAPIKey** policy with `InvalidAPICallAsNoApiProductMatchFound`.
+- **Allowing or Blocking a Model**: Any model **not** listed in the employee's authorized API Product (for example, `gemini-1.5-flash`) is automatically rejected at the gateway by **VerifyAPIKey** with `InvalidAPICallAsNoApiProductMatchFound`.
+- **Employee-Specific Tiers**: Because each employee has a dedicated Developer App in [`developers.json`](./developers.json), you can create multiple API Products (e.g., `agy-standard-product` vs. `agy-poweruser-product`) and assign them per employee under `"apiProducts"` to grant custom token limits or model access.
 
-### 3. Per-Employee Token Quotas (`developer.email`) & Cost-Center Resolution (`x-cost-center`)
+### 3. How Cost-Center Resolution & Per-Employee Token Quotas Work at Runtime
 1. **Per-Employee Quota Enforcement (`developer.email`)**:
-   - When **VerifyAPIKey** (`VA-VerifyAPIKey`) validates the consumer key, Apigee populates `verifyapikey.VA-VerifyAPIKey.developer.email` (the employee's email ID).
-   - The **LLM Token Quota** policies (`LQ-LLMTokenQuota-Enforce`, `LQ-LLMTokenQuota-Count`, and `LQ-LLMTokenQuota-Count-SSE`) use `<Identifier ref="verifyapikey.VA-VerifyAPIKey.developer.email"/>`, giving each employee their own independent daily token budget per model as defined in [`api-product.json`](./api-product.json).
-   - To change a model's token budget, edit `"limit"`, `"interval"`, or `"timeUnit"` (`minute`, `hour`, `day`, `month`) in [`api-product.json`](./api-product.json) and re-run `./deploy.sh`.
+   - When **VerifyAPIKey** (`VA-VerifyAPIKey`) validates the employee's unique API key, Apigee populates `verifyapikey.VA-VerifyAPIKey.developer.email`.
+   - The **LLM Token Quota** policies (`LQ-LLMTokenQuota-Enforce`, `LQ-LLMTokenQuota-Count`, and `LQ-LLMTokenQuota-Count-SSE`) use `<Identifier ref="verifyapikey.VA-VerifyAPIKey.developer.email"/>`, giving each employee an isolated daily token counter per model.
 2. **Developer Custom Attribute `x-cost-center` with Header Fallback**:
-   - Each Apigee Developer (employee) can have a custom attribute `x-cost-center` (e.g., `Platform-Engineering`), exposed at runtime as `verifyapikey.VA-VerifyAPIKey.developer.x-cost-center`.
-   - [`AM-ResolveDeveloperMetadata.xml`](./apiproxy/policies/AM-ResolveDeveloperMetadata.xml) sets `cost_center` from the Developer's `x-cost-center` custom attribute when present; if the custom attribute is not set on the Developer profile, `cost_center` automatically falls back to the `X-Cost-Center` request header extracted by [`EV-ExtractRequestMetadata.xml`](./apiproxy/policies/EV-ExtractRequestMetadata.xml).
-   - Finally, [`DC-CaptureGatewayAnalytics.xml`](./apiproxy/policies/DC-CaptureGatewayAnalytics.xml) pushes `cost_center` into Apigee Analytics (`dc_cost_center`) alongside `dc_ax_model_used` and `dc_tokens` (while `developer.email` is natively recorded by Apigee Analytics).
+   - [`AM-ResolveDeveloperMetadata.xml`](./apiproxy/policies/AM-ResolveDeveloperMetadata.xml) checks `verifyapikey.VA-VerifyAPIKey.developer.x-cost-center` (configured in [`developers.json`](./developers.json), such as `CC-1042-Payments-Core`).
+   - If present on the Developer profile, Apigee uses that authoritative cost center; if absent, Apigee falls back to the `X-Cost-Center` request header extracted by [`EV-ExtractRequestMetadata.xml`](./apiproxy/policies/EV-ExtractRequestMetadata.xml).
+   - [`DC-CaptureGatewayAnalytics.xml`](./apiproxy/policies/DC-CaptureGatewayAnalytics.xml) records `dc_cost_center`, `dc_ax_model_used`, and `dc_tokens` into Apigee Analytics (alongside Apigee's built-in `developer_email` dimension).
 
 ---
 
 ## Optional: Automatically Injecting Workstation & User Details into `admin_settings.json` via MDM
 
 > [!NOTE]
-> **Optional Configuration (Not Required):** The default gateway setup works out of the box using `X-Cost-Center` as shown above. This section is **optional** and only needed if you want your MDM tool to automatically populate workstation or user details (`serial number`, `hostname`, or `console user`) into `admin_settings.json`.
-
-If you want to capture device or developer identity—such as **serial number**, **hostname**, or **console user**—at the gateway layer, your MDM deployment script (Jamf Pro, Microsoft Intune, Kandji, Puppet, etc.) can dynamically query the workstation and write those values into `gateway.customHeaders` when generating `admin_settings.json`.
+> **Optional Configuration (Not Required):** Since each employee already has a unique API key mapped to their `developer.email` and `x-cost-center` attribute in Apigee, workstation headers are **optional** and only needed if you also want device telemetry (`serial number`, `hostname`, or `console user`) sent on requests.
 
 ### Example: macOS MDM Script (Jamf / Intune / Kandji)
 ```bash
@@ -182,10 +249,10 @@ cat <<EOF > "${TARGET_FILE}"
   "gateway": {
     "enabled": true,
     "url": "https://<YOUR_APIGEE_HOSTNAME>/agy-gateway",
-    "apiKey": "<YOUR_APIGEE_CONSUMER_KEY>",
+    "apiKey": "<EMPLOYEE_APIGEE_CONSUMER_KEY>",
     "wireProtocol": "genai",
     "customHeaders": {
-      "X-Cost-Center": "Platform-Engineering",
+      "X-Cost-Center": "CC-1042-Payments-Core",
       "X-Console-User": "${CONSOLE_USER}",
       "X-Workstation-Serial": "${SERIAL_NUM}",
       "X-Workstation-Hostname": "${HOSTNAME}"
@@ -222,10 +289,10 @@ $Settings = @{
   gateway = @{
     enabled = $true
     url = "https://<YOUR_APIGEE_HOSTNAME>/agy-gateway"
-    apiKey = "<YOUR_APIGEE_CONSUMER_KEY>"
+    apiKey = "<EMPLOYEE_APIGEE_CONSUMER_KEY>"
     wireProtocol = "genai"
     customHeaders = @{
-      "X-Cost-Center"          = "Platform-Engineering"
+      "X-Cost-Center"          = "CC-1042-Payments-Core"
       "X-Console-User"         = $ConsoleUser
       "X-Workstation-Serial"   = $Serial
       "X-Workstation-Hostname" = $Hostname
@@ -249,14 +316,9 @@ Once deployed, every Antigravity IDE or `agy` CLI call automatically sends those
 
 ```http
 POST /agy-gateway/v1beta/models/gemini-4-argon:streamGenerateContent?alt=sse HTTP/1.1
-Authorization: Bearer <YOUR_APIGEE_CONSUMER_KEY>
-X-Cost-Center: Platform-Engineering
-X-Console-User: saravana
+Authorization: Bearer <EMPLOYEE_APIGEE_CONSUMER_KEY>
+X-Cost-Center: CC-1042-Payments-Core
+X-Console-User: alex-rivera
 X-Workstation-Serial: C02XYZ123456
-X-Workstation-Hostname: macbook-pro-saravana
+X-Workstation-Hostname: macbook-pro-alex
 ```
-
-> **Updating the Apigee Quota Identifier:**  
-> Once these custom headers are added to `admin_settings.json`, if you want to enforce token quotas per user or per workstation (instead of per department), simply:
-> 1. Extract the new header (e.g., `X-Console-User` or `X-Workstation-Serial`) into a variable in [`EV-ExtractRequestMetadata.xml`](./apiproxy/policies/EV-ExtractRequestMetadata.xml).
-> 2. Update `<Identifier ref="..."/>` in the **LLM Token Quota** policies ([`LQ-LLMTokenQuota-Enforce.xml`](./apiproxy/policies/LQ-LLMTokenQuota-Enforce.xml), [`LQ-LLMTokenQuota-Count.xml`](./apiproxy/policies/LQ-LLMTokenQuota-Count.xml), and [`LQ-LLMTokenQuota-Count-SSE.xml`](./apiproxy/policies/LQ-LLMTokenQuota-Count-SSE.xml)) to reference that extracted variable.

@@ -22,9 +22,7 @@ SA_NAME="${SA_NAME:-llm-proxy}"
 SA_EMAIL="${SA_NAME}@${PROJECT_ID}.iam.gserviceaccount.com"
 PRODUCT_FILE="${PRODUCT_FILE:-${SCRIPT_DIR}/api-product.json}"
 PRODUCT_NAME="$(python3 -c "import json; print(json.load(open('${PRODUCT_FILE}'))['name'])")"
-DEV_EMAIL="${DEV_EMAIL:-admin@example.com}"
-DEV_COST_CENTER="${DEV_COST_CENTER:-Platform-Engineering}"
-APP_NAME="${APP_NAME:-agy-gateway-app}"
+DEVELOPERS_FILE="${DEVELOPERS_FILE:-${SCRIPT_DIR}/developers.json}"
 
 echo "==> 1. Obtaining Google Cloud Access Token..."
 if [ -f "${HOME}/.config/gcloud/application_default_credentials.json" ]; then
@@ -83,6 +81,7 @@ IMPORT_JSON="$(curl -s -X POST -H "Authorization: Bearer ${TOKEN}" \
   "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/apis?name=${PROXY_NAME}&action=import")"
 REV="$(echo "${IMPORT_JSON}" | python3 -c 'import sys,json; print(json.load(sys.stdin)["revision"])')"
 echo "    Imported Revision: ${REV}"
+rm -f apiproxy.zip
 
 echo "==> 6. Deploying Revision ${REV} to environment ${APIGEE_ENV} with Service Account ${SA_EMAIL}..."
 curl -s -X POST -H "Authorization: Bearer ${TOKEN}" \
@@ -108,42 +107,9 @@ else
     -d "${PRODUCT_PAYLOAD}" >/dev/null
 fi
 
-echo "==> 8. Ensuring Developer (${DEV_EMAIL}, x-cost-center=${DEV_COST_CENTER}) & Developer App (${APP_NAME}) exist..."
-DEV_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${TOKEN}" \
-  "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/developers/${DEV_EMAIL}")
-if [ "${DEV_CODE}" != "200" ]; then
-  curl -s -X POST -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" \
-    "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/developers" \
-    -d "{\"email\":\"${DEV_EMAIL}\",\"firstName\":\"Antigravity\",\"lastName\":\"Admin\",\"userName\":\"agy-admin\",\"attributes\":[{\"name\":\"x-cost-center\",\"value\":\"${DEV_COST_CENTER}\"}]}" >/dev/null
-else
-  python3 -c "
-import json, urllib.request
-headers = {'Authorization': 'Bearer ${TOKEN}', 'Content-Type': 'application/json'}
-url = 'https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/developers/${DEV_EMAIL}'
-with urllib.request.urlopen(urllib.request.Request(url, headers=headers)) as r:
-    dev = json.loads(r.read())
-attrs = dev.get('attributes', [])
-if not any(a.get('name') == 'x-cost-center' for a in attrs):
-    attrs.append({'name': 'x-cost-center', 'value': '${DEV_COST_CENTER}'})
-    dev['attributes'] = attrs
-    urllib.request.urlopen(urllib.request.Request(url, data=json.dumps(dev).encode(), headers=headers, method='PUT')).read()
-"
-fi
-
-APP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "Authorization: Bearer ${TOKEN}" \
-  "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/developers/${DEV_EMAIL}/apps/${APP_NAME}")
-if [ "${APP_CODE}" != "200" ]; then
-  curl -s -X POST -H "Authorization: Bearer ${TOKEN}" -H "Content-Type: application/json" \
-    "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/developers/${DEV_EMAIL}/apps" \
-    -d "{\"name\":\"${APP_NAME}\",\"apiProducts\":[\"${PRODUCT_NAME}\"]}" >/dev/null
-fi
-
-CONSUMER_KEY=$(curl -s -H "Authorization: Bearer ${TOKEN}" \
-  "https://apigee.googleapis.com/v1/organizations/${PROJECT_ID}/developers/${DEV_EMAIL}/apps/${APP_NAME}" | \
-  python3 -c 'import sys,json; print(json.load(sys.stdin)["credentials"][0]["consumerKey"])')
+echo "==> 8. Provisioning Employee Developers, x-cost-center Attributes & Unique API Keys from ${DEVELOPERS_FILE}..."
+PROJECT_ID="${PROJECT_ID}" TOKEN="${TOKEN}" PRODUCT_NAME="${PRODUCT_NAME}" "${SCRIPT_DIR}/provision-developers.sh" "${DEVELOPERS_FILE}"
 
 echo "==> Deployment Complete!"
 echo "    Gateway Endpoint : https://${APIGEE_HOST}/${PROXY_NAME}"
 echo "    API Product      : ${PRODUCT_NAME} (configured from api-product.json)"
-echo "    Developer App    : ${APP_NAME}"
-echo "    Consumer API Key : ${CONSUMER_KEY}"

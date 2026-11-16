@@ -12,7 +12,7 @@ set -euo pipefail
 
 GATEWAY_URL="${AGY_LLM_GATEWAY_URL:-https://<YOUR_APIGEE_HOSTNAME>/agy-gateway}"
 API_KEY="${AGY_LLM_GATEWAY_API_KEY:-}"
-COST_CENTER="${COST_CENTER:-Platform-Engineering}"
+COST_CENTER="${COST_CENTER:-CC-1042-Payments-Core}"
 
 if [ -z "${API_KEY}" ] && [ -f "admin_settings.json" ]; then
   API_KEY="$(python3 -c 'import json; print(json.load(open("admin_settings.json"))["gateway"]["apiKey"])')"

@@ -1,0 +1,36 @@
+{
+  "developers": [
+    {
+      "email": "alex.rivera@example.com",
+      "firstName": "Alex",
+      "lastName": "Rivera",
+      "userName": "alex-rivera",
+      "appName": "agy-key-alex-rivera",
+      "apiProducts": [
+        "agy-gateway-product"
+      ],
+      "attributes": [
+        {
+          "name": "x-cost-center",
+          "value": "CC-1042-Payments-Core"
+        }
+      ]
+    },
+    {
+      "email": "priya.nair@example.com",
+      "firstName": "Priya",
+      "lastName": "Nair",
+      "userName": "priya-nair",
+      "appName": "agy-key-priya-nair",
+      "apiProducts": [
+        "agy-gateway-product"
+      ],
+      "attributes": [
+        {
+          "name": "x-cost-center",
+          "value": "CC-2085-AI-Research"
+        }
+      ]
+    }
+  ]
+}

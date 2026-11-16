@@ -2,7 +2,7 @@
   "name": "agy-gateway-product",
   "displayName": "Antigravity Enterprise Gateway Product",
   "approvalType": "auto",
-  "description": "API Product authorizing Antigravity (agy) model requests via Apigee (/agy-gateway) with per-model and per-department LLMTokenQuota",
+  "description": "API Product authorizing Antigravity (agy) model requests via Apigee (/agy-gateway) with per-employee and per-model LLMTokenQuota",
   "environments": [
     "<YOUR_APIGEE_ENV>"
   ],

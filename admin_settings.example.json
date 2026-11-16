@@ -5,7 +5,7 @@
     "apiKey": "<YOUR_APIGEE_CONSUMER_KEY>",
     "wireProtocol": "genai",
     "customHeaders": {
-      "X-Cost-Center": "Platform-Engineering"
+      "X-Cost-Center": "CC-1042-Payments-Core"
     }
   },
   "models": {
