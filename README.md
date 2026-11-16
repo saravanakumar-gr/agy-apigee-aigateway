@@ -90,11 +90,11 @@ Employee records and their `x-cost-center` custom attributes are defined declara
       ]
     },
     {
-      "email": "priya.nair@example.com",
-      "firstName": "Priya",
-      "lastName": "Nair",
-      "userName": "priya-nair",
-      "appName": "agy-key-priya-nair",
+      "email": "saravana.r@example.com",
+      "firstName": "saravana",
+      "lastName": "R",
+      "userName": "saravana-r",
+      "appName": "agy-key-saravana-r",
       "apiProducts": [
         "agy-gateway-product"
       ],
