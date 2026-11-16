@@ -3,7 +3,17 @@
     <DisplayName>AM-ResolveDeveloperMetadata</DisplayName>
     <Properties/>
     <IgnoreUnresolvedVariables>true</IgnoreUnresolvedVariables>
-    <!-- Prefer Developer (employee) custom attribute 'x-cost-center'; if absent, 'cost_center' retains the X-Cost-Center header value -->
+    <!-- Prevent Apigee from appending proxy.pathsuffix (/v1beta/models/...) onto the TargetEndpoint URL -->
+    <AssignVariable>
+        <Name>target.copy.pathsuffix</Name>
+        <Value>false</Value>
+    </AssignVariable>
+    <!-- JSONPath variable used by LQ-LLMTokenQuota-Count-SSE inside EventFlow -->
+    <AssignVariable>
+        <Name>token_json_path</Name>
+        <Value>$.usageMetadata.totalTokenCount</Value>
+    </AssignVariable>
+    <!-- Prefer Developer (employee) custom attribute 'x-cost-center'; if unresolved/absent, 'cost_center' retains the X-Cost-Center header value -->
     <AssignVariable>
         <Name>cost_center</Name>
         <Ref>verifyapikey.VA-VerifyAPIKey.developer.x-cost-center</Ref>

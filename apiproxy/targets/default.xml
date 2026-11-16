@@ -1,11 +1,11 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <TargetEndpoint name="default">
-    <Description>Vertex AI Gemini TargetEndpoint using declarative AssignMessage target.url and GoogleAccessToken Auth</Description>
+    <Description>Gemini Platform TargetEndpoint using dynamic URL template and GoogleAccessToken Auth</Description>
     <FaultRules/>
     <PreFlow name="PreFlow">
         <Request>
             <Step>
-                <Name>AM-PrepareTargetRequest</Name>
+                <Name>AM-ResolveDeveloperMetadata</Name>
             </Step>
         </Request>
         <Response/>
@@ -33,7 +33,7 @@
             <Property name="io.timeout.millis">300000</Property>
             <Property name="keepalive.timeout.millis">60000</Property>
         </Properties>
-        <URL>https://aiplatform.googleapis.com</URL>
+        <URL>https://aiplatform.googleapis.com/v1beta1/projects/{organization.name}/locations/global/publishers/google/models/{model_name}:{model_action}</URL>
         <Authentication>
             <GoogleAccessToken>
                 <Scopes>

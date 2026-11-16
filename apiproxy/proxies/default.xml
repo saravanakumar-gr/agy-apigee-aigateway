@@ -11,10 +11,6 @@
                 <Name>VA-VerifyAPIKey</Name>
             </Step>
             <Step>
-                <Name>AM-ResolveDeveloperMetadata</Name>
-                <Condition>(verifyapikey.VA-VerifyAPIKey.developer.x-cost-center != null) and (verifyapikey.VA-VerifyAPIKey.developer.x-cost-center != "")</Condition>
-            </Step>
-            <Step>
                 <Name>LQ-LLMTokenQuota-Enforce</Name>
                 <Condition>(request.verb = "POST") and (model_name != null)</Condition>
             </Step>

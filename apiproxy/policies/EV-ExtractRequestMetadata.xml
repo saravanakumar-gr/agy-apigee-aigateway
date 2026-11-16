@@ -7,15 +7,6 @@
     <Header name="Authorization">
         <Pattern ignoreCase="true">Bearer {client_apikey}</Pattern>
     </Header>
-    <Header name="x-goog-api-key">
-        <Pattern ignoreCase="true">{client_apikey}</Pattern>
-    </Header>
-    <Header name="x-api-key">
-        <Pattern ignoreCase="true">{client_apikey}</Pattern>
-    </Header>
-    <QueryParam name="key">
-        <Pattern ignoreCase="true">{client_apikey}</Pattern>
-    </QueryParam>
     <Header name="X-Cost-Center">
         <Pattern ignoreCase="true">{cost_center}</Pattern>
     </Header>

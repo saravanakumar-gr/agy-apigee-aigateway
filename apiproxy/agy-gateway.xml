@@ -8,7 +8,6 @@
         <Policy>VA-VerifyAPIKey</Policy>
         <Policy>AM-ResolveDeveloperMetadata</Policy>
         <Policy>LQ-LLMTokenQuota-Enforce</Policy>
-        <Policy>AM-PrepareTargetRequest</Policy>
         <Policy>EV-ExtractTokenUsage</Policy>
         <Policy>LQ-LLMTokenQuota-Count</Policy>
         <Policy>LQ-LLMTokenQuota-Count-SSE</Policy>
