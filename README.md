@@ -10,7 +10,7 @@ This repository contains a sample template to serve as a reference implementatio
 
 ## Architecture Overview
 
-![Apigee X Enterprise AI Gateway Architecture](./architecture.png?v=5)
+![Apigee X Enterprise AI Gateway Architecture](./architecture.png?v=6)
 
 ---
 
@@ -35,7 +35,7 @@ In this architecture, **every employee using Antigravity (`agy` CLI or IDE) is r
 | Enterprise Gateway Requirement | How Apigee X (`agy-gateway`) Implements It |
 | :--- | :--- |
 | **1. Preserve Client Attribution Headers**<br>(`User-Agent`, `X-Goog-Api-Client`, `X-Cost-Center`) | Apigee preserves client attribution headers verbatim by default, while `<GoogleAccessToken>` on the TargetEndpoint automatically replaces the client's `Authorization` header with a Google Cloud IAM OAuth token. |
-| **2. SSE Streaming & Thinking Level Support**<br>(`:streamGenerateContent?alt=sse`) | Forwards SSE streams (`text/event-stream`) and `thinkingConfig` (`thinkingLevel`: `LOW`, `MEDIUM`, `HIGH`) directly to Gemini Platform (`gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-4-argon`), extracting SSE token usage via `<EventFlow content-type="text/event-stream">` and `response.event.current.data`. |
+| **2. Native SSE Streaming Pass-Through**<br>(`:streamGenerateContent?alt=sse`) | Forwards native Gemini payloads untouched and streams SSE responses (`text/event-stream`) directly from Gemini Platform (`gemini-3.8-flash`, `gemini-3.7-flash`, `gemini-4-argon`), extracting SSE token usage via `<EventFlow content-type="text/event-stream">` and `response.event.current.data`. |
 | **3. Acknowledge IDE Telemetry Endpoints**<br>(`POST /v1beta:*` $\rightarrow$ `HTTP 200 OK` `{}`) | Handled via a loopback `<RouteRule>` and `AssignMessage` policy so Antigravity IDE telemetry pings (`POST /v1beta:recordTelemetry`) return `200 OK` `{}` without hitting upstream endpoints. |
 | **4. Bearer API Key Auth**<br>(`Authorization: Bearer <KEY>`) | Extracts the employee's unique API key from `Authorization: Bearer <KEY>` and validates it via **VerifyAPIKey** against the authorized Apigee API Product (`api-product.json`). |
 | **5. Model Allowlisting & Per-Employee Token Quotas** | Enforces strict model allowlisting and daily token budgets per `(developer.email, model)` combination using Apigee's **LLM Token Quota** policy and [`api-product.json`](./api-product.json). |
